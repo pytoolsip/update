@@ -106,4 +106,3 @@ venv.bak/
 # project
 *.b64
 installer.py
-update.py
