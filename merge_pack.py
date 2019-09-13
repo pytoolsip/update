@@ -67,7 +67,7 @@ if __name__ == '__main__':
 	if len(sys.argv) > 1:
 		argv.extend(sys.argv[1:]);
 	# 目标文件路径
-	tgtPath = "installer.py";
+	tgtPath = "update.py";
 	if os.path.exists("main.py"):
 		merge("main.py", tgtPath);
-		pack(tgtPath, argv);
+		# pack(tgtPath, argv);

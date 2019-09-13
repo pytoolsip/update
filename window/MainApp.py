@@ -51,4 +51,5 @@ class MainApp(Tk):
 
     # 退出窗口
     def onQuit(self, data = None):
-        self.quit();
+        # self.quit();
+        self.destroy();
