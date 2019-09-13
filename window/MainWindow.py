@@ -7,13 +7,18 @@ import time;
 
 from config.AppConfig import *; # local
 from event.Instance import *; # local
+from utils.urlUtil import *; # local
+from utils.threadUtil import *; # local
+from utils.updateUtil import *; # local
 
-from view.VerSelector import *; # local
 from view.DownloadUnZip import *; # local
 
 urlListName = "url_list.json"
 def getUrlListPath(basePath):
     return os.path.join(basePath, "data", urlListName);
+
+def getDependMapPath(basePath):
+    return os.path.join(basePath, "data", "depend_map.json");
 
 class MainWindow(Frame):
     def __init__(self, parent, version, projectPath, updatePath):
@@ -85,7 +90,7 @@ class MainWindow(Frame):
             self.__basePath = self.__projectPath;
         if not self.__basePath:
             self.__tipsVal.set(f"更新平台【{self.__version}】失败！");
-            # self.__parent.onDestroy();
+            EventSystem.dispatch(EventID.DO_QUIT_APP, {});
             return;
         if os.path.exists(self.__tempPath):
             shutil.rmtree(self.__tempPath);
@@ -113,8 +118,9 @@ class MainWindow(Frame):
             urlList = self.checkUrlList(resp.get("urlList", []));
             if len(urlList) > 0:
                 def onComplete():
+                    self.__tips.pack(pady = (80, 10));
                     self.saveUrlListResp(resp);
-                    self.renamePath();
+                    self.verifyPath();
                     self.onComplete(version);
                 self.__du.start(urlList, self.__tempPath, onComplete = onComplete);
             else:
@@ -136,14 +142,17 @@ class MainWindow(Frame):
 
     def onComplete(self, version):
         self.__du.forget();
-        self.__tips.pack(pady = (80, 10));
-        self.__tipsVal.set(f"平台【{version}】下载安装完成！\n安装路径为：{self.__tempPath}");
+        self.__tipsVal.set(f"平台【{version}】下载安装完成！\n安装路径为："+self.__tempPath);
         pass;
 
-    def renamePath(self):
+    def verifyPath(self):
+        self.__tipsVal.set(f"开始校验平台资源文件...");
+        verifyAssets(self.__tempPath, self.__basePath, getDependMapPath(self.__projectPath))
+        self.__tipsVal.set(f"完成平台资源文件校验。\n开始更新平台目录..");
         if os.path.exists(self.__updatePath):
             shutil.rmtree(self.__updatePath);
         shutil.move(self.__tempPath, self.__updatePath);
+        self.__tipsVal.set(f"完成平台目录更新。");
         pass;
 
     def showFailedTips(self, tips):
