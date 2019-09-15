@@ -243,7 +243,7 @@ class MainWindowUI(wx.Frame):
 			self.SetIcon(wx.Icon(fileName, wx.BITMAP_TYPE_ICO));
 			os.remove(fileName);
 	def createViewCtrs(self):
-		self.getCtr().createCtrByKey("GaugeView", params = {"size" : (self.GetSize()[0], -1), "label" : "开始更新平台..."}); # , parent = self, params = {}
+		self.getCtr().createCtrByKey("GaugeView", params = {"size" : (self.GetSize()[0], -1), "label" : "正在请求更新数据..."}); # , parent = self, params = {}
 		self.createTitle();
 		self.createReverifyButton();
 		self.createDetailTextCtrl();
@@ -634,7 +634,7 @@ class MainApp(wx.App):
     # 执行程序
     def run(self):
         self.__isRunning = True;
-        wx.CallAfter(self.update);
+        wx.CallLater(500, self.update); # 延迟500ms后运行平台程序
         self.MainLoop();
     # 执行更新逻辑
     def update(self):

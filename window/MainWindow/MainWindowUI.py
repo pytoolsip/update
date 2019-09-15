@@ -42,7 +42,7 @@ class MainWindowUI(wx.Frame):
 			os.remove(fileName);
 
 	def createViewCtrs(self):
-		self.getCtr().createCtrByKey("GaugeView", params = {"size" : (self.GetSize()[0], -1), "label" : "开始更新平台..."}); # , parent = self, params = {}
+		self.getCtr().createCtrByKey("GaugeView", params = {"size" : (self.GetSize()[0], -1), "label" : "正在请求更新数据..."}); # , parent = self, params = {}
 		self.createTitle();
 		self.createReverifyButton();
 		self.createDetailTextCtrl();

@@ -74,7 +74,7 @@ class MainApp(wx.App):
     # 执行程序
     def run(self):
         self.__isRunning = True;
-        wx.CallAfter(self.update);
+        wx.CallLater(500, self.update); # 延迟500ms后运行平台程序
         self.MainLoop();
 
     # 执行更新逻辑
