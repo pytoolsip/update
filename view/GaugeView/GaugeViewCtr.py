@@ -86,4 +86,4 @@ class GaugeViewCtr(object):
 		self.__ui.updateView(data);
 		
 	def getGaugeValue(self):
-		self.__ui.getGaugeValue();
+		return self.__ui.getGaugeValue();

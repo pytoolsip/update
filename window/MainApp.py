@@ -3,6 +3,7 @@ import time;
 import os;
 import base64;
 import shutil;
+import zipfile;
 
 from event.Instance import *; # local
 from config.AppConfig import *; # local
@@ -17,6 +18,14 @@ def getUrlListPath(basePath):
 
 def getDependMapPath(basePath):
     return os.path.join(basePath, "data", "depend_map.json");
+
+def checkPath(path):
+    if not path:
+        return "";
+    path = path.replace("\\", "/");
+    if path[0] == "/":
+        return path[1:];
+    return path;
 
 class MainApp(wx.App):
     def __init__(self, version, projectPath, updatePath):
@@ -90,7 +99,7 @@ class MainApp(wx.App):
         if ret:
             urlList = self.checkUrlList(resp.get("urlList", []));
             if len(urlList) > 0:
-                self.createTasks(urlList);
+                self.createTasks(self.__tempPath, urlList);
                 def onComplete():
                     self.saveUrlListResp(resp);
                     self.onFinish();
@@ -103,7 +112,7 @@ class MainApp(wx.App):
             wx.MessageDialog(self.__mainWinCtr.getUI(), "下载平台失败！", "网络异常", style = wx.OK|wx.ICON_ERROR).ShowModal();
 
     # 创建任务
-    def createTasks(self, urlList):
+    def createTasks(self, basePath, urlList):
         EventSystem.dispatch(EventID.CLEAR_SCHEDULE_TASK, {});
         for urlInfo in urlList:
             name, url = urlInfo.get("name", ""), urlInfo["url"];
@@ -162,7 +171,7 @@ class MainApp(wx.App):
     def getUrlKeyMap(self, urlList):
         keyMap = {};
         for urlInfo in urlList:
-            keyMap[urlInfo.get("type", "") + urlInfo.get("name", "")] = urlInfo;
+            keyMap["|".join([urlInfo.get("type", ""), urlInfo.get("name", "")])] = urlInfo;
         return keyMap;
 
     def checkUrlList(self, urlList):
@@ -172,7 +181,7 @@ class MainApp(wx.App):
         if os.path.exists(urlListPath):
             with open(urlListPath, "r") as f:
                 baseJson = json.loads(f.read());
-                baseKeyMap = self.getUrlKeyMap((baseJson.get("urlList")));
+                baseKeyMap = self.getUrlKeyMap((baseJson.get("urlList", [])));
         # 返回检测结果
         retList = [];
         for k,v in keyMap.items():
@@ -185,6 +194,12 @@ class MainApp(wx.App):
                 retList.append(v);
         return retList;
 
+    # 校验文件路径
+    def __checkFilePath__(self, filePath):
+        dirPath = os.path.dirname(filePath);
+        if not os.path.exists(dirPath):
+            os.mkdir(dirPath);
+
     # 校验及处理更新目录
     def __dealUpdatePath__(self, callback = None):
         verifyAssets(self.__tempPath, self.__basePath, getDependMapPath(self.__projectPath));
@@ -193,19 +208,20 @@ class MainApp(wx.App):
             shutil.rmtree(self.__updatePath);
         callback(0.75);
         shutil.move(self.__tempPath, self.__updatePath);
+        return True;
 
     # 下载文件
     def __download__(self, url, filepath, callback = None):
-        self.__tips.set(f"正在下载：\n{url}");
         self.__checkFilePath__(filepath);
         def schedule(block, size, totalSize):
-            callback(block*size / totalSize);
+            callback(block*size/totalSize);
         request.urlretrieve(url, filepath, schedule);
+        return True;
 
     # 解压文件
     def __unzip__(self, filepath, dirpath, isRmZip = True, callback = None):
         if not os.path.exists(filepath):
-            return;
+            return False;
         with zipfile.ZipFile(filepath, "r") as zf:
             totalCnt = len(zf.namelist());
             completeCnt = 0;
@@ -217,3 +233,5 @@ class MainApp(wx.App):
             # 移除zip文件
             if isRmZip:
                 os.remove(filepath);
+            return True;
+        return False;

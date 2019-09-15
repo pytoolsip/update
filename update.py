@@ -4,6 +4,7 @@ import time;
 import os;
 import base64;
 import shutil;
+import zipfile;
 from enum import Enum, unique;
 global CUR_EVENT_ID;
 CUR_EVENT_ID = -1;
@@ -404,7 +405,7 @@ class GaugeViewCtr(object):
 	def updateView(self, data):
 		self.__ui.updateView(data);
 	def getGaugeValue(self):
-		self.__ui.getGaugeValue();
+		return self.__ui.getGaugeValue();
 class MainWindowCtr(object):
 	"""docstring for MainWindowCtr"""
 	def __init__(self, parent = None, params = {}):
@@ -415,6 +416,7 @@ class MainWindowCtr(object):
 		self.initUI(parent);
 		self.registerEventMap(); # 注册事件
 		self.__scheduleTaskList = []; # 调度任务列表
+		self.__gaugeRecordVal = 0; # 进度记录值
 	def __del__(self):
 		self.__dest__();
 	def __dest__(self):
@@ -506,13 +508,15 @@ class MainWindowCtr(object):
 	def handleScheduleTaskList(self, scheduleTaskList = []):
 		if len(scheduleTaskList) > 0:
 			taskInfo = scheduleTaskList.pop(0);
+			self.__gaugeRecordVal = 1 - (len(scheduleTaskList) + 1)/len(self.__scheduleTaskList);
 			self.getCtrByKey("GaugeView").updateView({
 				"text" : taskInfo["text"],
-				"gauge" : 1 - (len(scheduleTaskList) + 1)/len(self.__scheduleTaskList),
+				"gauge" : self.__gaugeRecordVal,
 			});
 			# 启动线程
 			threading.Thread(target = self.handleScheduleTask, args = (taskInfo, scheduleTaskList, )).start();
 		else:
+			self.__gaugeRecordVal = 1;
 			self.getCtrByKey("GaugeView").updateView({
 				"text" : "完成更新，开始运行平台程序。",
 				"gauge" : 1,
@@ -571,20 +575,26 @@ class MainWindowCtr(object):
 		return isContinue, taskResult;
 	# 开始任务
 	def startScheduleTask(self, data):
-		self.handleScheduleEvent(self, data.get("callbackInfo", {}), data.get("failCallbackInfo", {}));
+		self.handleScheduleEvent(data.get("callbackInfo", {}), data.get("failCallbackInfo", {}));
 	# 清除任务
 	def clearScheduleTask(self, data = None):
 		self.__scheduleTaskList =[];
 	def addSingleGaugeValue(self, rate):
-		curVal = self.getCtrByKey("GaugeView").getGaugeValue();
 		self.getCtrByKey("GaugeView").updateView({
-			"gauge" : curVal + rate / len(self.__scheduleTaskList),
+			"gauge" : self.__gaugeRecordVal + rate / len(self.__scheduleTaskList),
 		});
 urlListName = "url_list.json"
 def getUrlListPath(basePath):
     return os.path.join(basePath, "data", urlListName);
 def getDependMapPath(basePath):
     return os.path.join(basePath, "data", "depend_map.json");
+def checkPath(path):
+    if not path:
+        return "";
+    path = path.replace("\\", "/");
+    if path[0] == "/":
+        return path[1:];
+    return path;
 class MainApp(wx.App):
     def __init__(self, version, projectPath, updatePath):
         super(MainApp, self).__init__();
@@ -646,7 +656,7 @@ class MainApp(wx.App):
         if ret:
             urlList = self.checkUrlList(resp.get("urlList", []));
             if len(urlList) > 0:
-                self.createTasks(urlList);
+                self.createTasks(self.__tempPath, urlList);
                 def onComplete():
                     self.saveUrlListResp(resp);
                     self.onFinish();
@@ -658,7 +668,7 @@ class MainApp(wx.App):
         else:
             wx.MessageDialog(self.__mainWinCtr.getUI(), "下载平台失败！", "网络异常", style = wx.OK|wx.ICON_ERROR).ShowModal();
     # 创建任务
-    def createTasks(self, urlList):
+    def createTasks(self, basePath, urlList):
         EventSystem.dispatch(EventID.CLEAR_SCHEDULE_TASK, {});
         for urlInfo in urlList:
             name, url = urlInfo.get("name", ""), urlInfo["url"];
@@ -724,7 +734,8 @@ class MainApp(wx.App):
         if os.path.exists(urlListPath):
             with open(urlListPath, "r") as f:
                 baseJson = json.loads(f.read());
-                baseKeyMap = self.getUrlKeyMap((baseJson.get("urlList")));
+                baseKeyMap = self.getUrlKeyMap((baseJson.get("urlList", [])));
+        print("urlListPath:::", keyMap, baseKeyMap)
         # 返回检测结果
         retList = [];
         for k,v in keyMap.items():
@@ -736,6 +747,11 @@ class MainApp(wx.App):
             else:
                 retList.append(v);
         return retList;
+    # 校验文件路径
+    def __checkFilePath__(self, filePath):
+        dirPath = os.path.dirname(filePath);
+        if not os.path.exists(dirPath):
+            os.mkdir(dirPath);
     # 校验及处理更新目录
     def __dealUpdatePath__(self, callback = None):
         verifyAssets(self.__tempPath, self.__basePath, getDependMapPath(self.__projectPath));
@@ -744,17 +760,18 @@ class MainApp(wx.App):
             shutil.rmtree(self.__updatePath);
         callback(0.75);
         shutil.move(self.__tempPath, self.__updatePath);
+        return True;
     # 下载文件
     def __download__(self, url, filepath, callback = None):
-        self.__tips.set(f"正在下载：\n{url}");
         self.__checkFilePath__(filepath);
         def schedule(block, size, totalSize):
-            callback(block*size / totalSize);
+            callback(block*size/totalSize);
         request.urlretrieve(url, filepath, schedule);
+        return True;
     # 解压文件
     def __unzip__(self, filepath, dirpath, isRmZip = True, callback = None):
         if not os.path.exists(filepath):
-            return;
+            return False;
         with zipfile.ZipFile(filepath, "r") as zf:
             totalCnt = len(zf.namelist());
             completeCnt = 0;
@@ -766,6 +783,8 @@ class MainApp(wx.App):
             # 移除zip文件
             if isRmZip:
                 os.remove(filepath);
+            return True;
+        return False;
 
 if __name__ == '__main__':
     if len(sys.argv) <= 3:

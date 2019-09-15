@@ -26,6 +26,7 @@ class MainWindowCtr(object):
 		self.initUI(parent);
 		self.registerEventMap(); # 注册事件
 		self.__scheduleTaskList = []; # 调度任务列表
+		self.__gaugeRecordVal = 0; # 进度记录值
 
 	def __del__(self):
 		self.__dest__();
@@ -134,13 +135,15 @@ class MainWindowCtr(object):
 	def handleScheduleTaskList(self, scheduleTaskList = []):
 		if len(scheduleTaskList) > 0:
 			taskInfo = scheduleTaskList.pop(0);
+			self.__gaugeRecordVal = 1 - (len(scheduleTaskList) + 1)/len(self.__scheduleTaskList);
 			self.getCtrByKey("GaugeView").updateView({
 				"text" : taskInfo["text"],
-				"gauge" : 1 - (len(scheduleTaskList) + 1)/len(self.__scheduleTaskList),
+				"gauge" : self.__gaugeRecordVal,
 			});
 			# 启动线程
 			threading.Thread(target = self.handleScheduleTask, args = (taskInfo, scheduleTaskList, )).start();
 		else:
+			self.__gaugeRecordVal = 1;
 			self.getCtrByKey("GaugeView").updateView({
 				"text" : "完成更新，开始运行平台程序。",
 				"gauge" : 1,
@@ -202,14 +205,13 @@ class MainWindowCtr(object):
 
 	# 开始任务
 	def startScheduleTask(self, data):
-		self.handleScheduleEvent(self, data.get("callbackInfo", {}), data.get("failCallbackInfo", {}));
+		self.handleScheduleEvent(data.get("callbackInfo", {}), data.get("failCallbackInfo", {}));
 
 	# 清除任务
 	def clearScheduleTask(self, data = None):
 		self.__scheduleTaskList =[];
 
 	def addSingleGaugeValue(self, rate):
-		curVal = self.getCtrByKey("GaugeView").getGaugeValue();
 		self.getCtrByKey("GaugeView").updateView({
-			"gauge" : curVal + rate / len(self.__scheduleTaskList),
+			"gauge" : self.__gaugeRecordVal + rate / len(self.__scheduleTaskList),
 		});
