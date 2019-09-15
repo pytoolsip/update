@@ -128,7 +128,7 @@ AppConfig = {
 	"Title" : u"PyToolsIP Update",
 	"Size" : (640, 420),
 	"Copyright" : u"Copyright(C) 2018-2019 JimDreamHeart. All Rights Reserved",
-	"WinTitle" : u"PyToolsIP【Python工具集成平台】",
+	"WinTitle" : u"更新 PyToolsIP【Python工具集成平台】",
 	"ContentColor" : "#CDCDCD",
 	"homeUrl" : "http://jimdreamheart.club",
 	# "homeUrl" : "http://localhost:8000",
@@ -160,19 +160,19 @@ def _getMd5Map_(tempPath, targetPath):
 	tmpMd5, targetMd5 = {}, {};
 	fileName = "_file_md5_map_.json";
 	filePath = os.path.join(tempPath, fileName);
-	if os.path.exist(filePath):
+	if os.path.exists(filePath):
 		tmpMd5 = _getJsonData_(filePath);
 	filePath = os.path.join(targetPath, fileName);
-	if os.path.exist(filePath):
+	if os.path.exists(filePath):
 		targetMd5 = _getJsonData_(filePath);
 	return tmpMd5, targetMd5;
 def _copyFileByMd5s_(tempPath, targetPath):
 	tmpMd5Map, tgMd5Map = _getMd5Map_(tempPath, targetPath);
 	for k,v in tmpMd5Map.items():
 		tmpFile, tgFile = os.path.join(tempPath, k), os.path.join(targetPath, k);
-		if os.path.exist(tmpFile) and v == tgMd5Map.get(k, ""):
+		if os.path.exists(tmpFile) and v == tgMd5Map.get(k, ""):
 			continue; # 已存在且md5值一样，则跳过
-		if not os.path.exist(tgFile):
+		if not os.path.exists(tgFile):
 			return False; # 不存在目标文件，则更新失败
 		shutil.copyfile(tgFile, tmpFile); # 拷贝文件
 	return True;
@@ -634,18 +634,29 @@ class MainApp(wx.App):
     # 执行程序
     def run(self):
         self.__isRunning = True;
+        wx.CallAfter(self.update);
+        self.MainLoop();
+    # 执行更新逻辑
+    def update(self):
         self.verifyPath();
         self.downloadIP();
-        self.MainLoop();
     def onFinish(self):
         self.__isRunning = False;
+        wx.CallLater(1000, self.runPytoolsip); # 延迟1s后运行平台程序
+    def runPytoolsip(self):
+        pjPath = os.path.abspath(self.__projectPath);
+        if os.path.exists(pjPath):
+            os.system(" ".join(["start /d", pjPath, "pytoolsip.exe"]));
+        else:
+            wx.MessageDialog(self.__mainWinCtr.getUI(), "未找到平台的运行程序！", "运行平台异常", style = wx.OK|wx.ICON_ERROR).ShowModal();
+        self.onQuit();
     def verifyPath(self):
         if os.path.exists(getUrlListPath(self.__updatePath)):
             self.__basePath = self.__updatePath;
         elif os.path.exists(getUrlListPath(self.__projectPath)):
             self.__basePath = self.__projectPath;
         if not self.__basePath:
-            # self.onQuit();
+            self.onQuit();
             return;
         if os.path.exists(self.__tempPath):
             shutil.rmtree(self.__tempPath);
@@ -656,12 +667,10 @@ class MainApp(wx.App):
         if ret:
             urlList = self.checkUrlList(resp.get("urlList", []));
             if len(urlList) > 0:
-                self.createTasks(self.__tempPath, urlList);
-                def onComplete():
-                    self.saveUrlListResp(resp);
-                    self.onFinish();
+                self.saveUrlListResp(resp); # 保存请求数据
+                self.createTasks(self.__tempPath, urlList); # 创建任务
                 EventSystem.dispatch(EventID.START_SCHEDULE_TASK, {
-                    "callbackInfo" : {"callback" : onComplete},
+                    "callbackInfo" : {"callback" : self.onFinish},
                 });
             else:
                 wx.MessageDialog(self.__mainWinCtr.getUI(), "下载平台失败！", "数据异常", style = wx.OK|wx.ICON_ERROR).ShowModal();
@@ -722,10 +731,11 @@ class MainApp(wx.App):
             os.makedirs(dataPath);
         with open(os.path.join(dataPath, urlListName), "w") as f:
             f.write(json.dumps(urlList));
+            f.close();
     def getUrlKeyMap(self, urlList):
         keyMap = {};
         for urlInfo in urlList:
-            keyMap[urlInfo.get("type", "") + urlInfo.get("name", "")] = urlInfo;
+            keyMap["|".join([urlInfo.get("type", ""), urlInfo.get("name", "")])] = urlInfo;
         return keyMap;
     def checkUrlList(self, urlList):
         keyMap = self.getUrlKeyMap(urlList);
@@ -735,7 +745,7 @@ class MainApp(wx.App):
             with open(urlListPath, "r") as f:
                 baseJson = json.loads(f.read());
                 baseKeyMap = self.getUrlKeyMap((baseJson.get("urlList", [])));
-        print("urlListPath:::", keyMap, baseKeyMap)
+                f.close();
         # 返回检测结果
         retList = [];
         for k,v in keyMap.items():

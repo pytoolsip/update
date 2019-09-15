@@ -18,10 +18,10 @@ def _getMd5Map_(tempPath, targetPath):
 	tmpMd5, targetMd5 = {}, {};
 	fileName = "_file_md5_map_.json";
 	filePath = os.path.join(tempPath, fileName);
-	if os.path.exist(filePath):
+	if os.path.exists(filePath):
 		tmpMd5 = _getJsonData_(filePath);
 	filePath = os.path.join(targetPath, fileName);
-	if os.path.exist(filePath):
+	if os.path.exists(filePath):
 		targetMd5 = _getJsonData_(filePath);
 	return tmpMd5, targetMd5;
 
@@ -30,9 +30,9 @@ def _copyFileByMd5s_(tempPath, targetPath):
 	tmpMd5Map, tgMd5Map = _getMd5Map_(tempPath, targetPath);
 	for k,v in tmpMd5Map.items():
 		tmpFile, tgFile = os.path.join(tempPath, k), os.path.join(targetPath, k);
-		if os.path.exist(tmpFile) and v == tgMd5Map.get(k, ""):
+		if os.path.exists(tmpFile) and v == tgMd5Map.get(k, ""):
 			continue; # 已存在且md5值一样，则跳过
-		if not os.path.exist(tgFile):
+		if not os.path.exists(tgFile):
 			return False; # 不存在目标文件，则更新失败
 		shutil.copyfile(tgFile, tmpFile); # 拷贝文件
 	return True;

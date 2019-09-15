@@ -74,12 +74,25 @@ class MainApp(wx.App):
     # 执行程序
     def run(self):
         self.__isRunning = True;
+        wx.CallAfter(self.update);
+        self.MainLoop();
+
+    # 执行更新逻辑
+    def update(self):
         self.verifyPath();
         self.downloadIP();
-        self.MainLoop();
 
     def onFinish(self):
         self.__isRunning = False;
+        wx.CallLater(1000, self.runPytoolsip); # 延迟1s后运行平台程序
+
+    def runPytoolsip(self):
+        pjPath = os.path.abspath(self.__projectPath);
+        if os.path.exists(pjPath):
+            os.system(" ".join(["start /d", pjPath, "pytoolsip.exe"]));
+        else:
+            wx.MessageDialog(self.__mainWinCtr.getUI(), "未找到平台的运行程序！", "运行平台异常", style = wx.OK|wx.ICON_ERROR).ShowModal();
+        self.onQuit();
 
     def verifyPath(self):
         if os.path.exists(getUrlListPath(self.__updatePath)):
@@ -87,7 +100,7 @@ class MainApp(wx.App):
         elif os.path.exists(getUrlListPath(self.__projectPath)):
             self.__basePath = self.__projectPath;
         if not self.__basePath:
-            # self.onQuit();
+            self.onQuit();
             return;
         if os.path.exists(self.__tempPath):
             shutil.rmtree(self.__tempPath);
@@ -99,12 +112,10 @@ class MainApp(wx.App):
         if ret:
             urlList = self.checkUrlList(resp.get("urlList", []));
             if len(urlList) > 0:
-                self.createTasks(self.__tempPath, urlList);
-                def onComplete():
-                    self.saveUrlListResp(resp);
-                    self.onFinish();
+                self.saveUrlListResp(resp); # 保存请求数据
+                self.createTasks(self.__tempPath, urlList); # 创建任务
                 EventSystem.dispatch(EventID.START_SCHEDULE_TASK, {
-                    "callbackInfo" : {"callback" : onComplete},
+                    "callbackInfo" : {"callback" : self.onFinish},
                 });
             else:
                 wx.MessageDialog(self.__mainWinCtr.getUI(), "下载平台失败！", "数据异常", style = wx.OK|wx.ICON_ERROR).ShowModal();
@@ -167,6 +178,7 @@ class MainApp(wx.App):
             os.makedirs(dataPath);
         with open(os.path.join(dataPath, urlListName), "w") as f:
             f.write(json.dumps(urlList));
+            f.close();
 
     def getUrlKeyMap(self, urlList):
         keyMap = {};
@@ -182,6 +194,7 @@ class MainApp(wx.App):
             with open(urlListPath, "r") as f:
                 baseJson = json.loads(f.read());
                 baseKeyMap = self.getUrlKeyMap((baseJson.get("urlList", [])));
+                f.close();
         # 返回检测结果
         retList = [];
         for k,v in keyMap.items():
