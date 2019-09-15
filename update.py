@@ -16,7 +16,7 @@ class EVENT_ID(Enum):
 	@staticmethod
 	def getNewId():
 		return getNewEventId();
-	WM_DELETE_WINDOW = getNewEventId(); # 关闭窗口事件
+	EXIT_APP = getNewEventId(); # 关闭窗口事件
 	DO_QUIT_APP = getNewEventId(); # 主动退出窗口事件
 @unique
 class EventState(Enum):
@@ -139,7 +139,7 @@ class MainApp(Tk):
         self.initTitle();
         self.initSize();
         self.initIcon();
-        self.protocol("WM_DELETE_WINDOW", self.onDestroy);
+        self.protocol("EXIT_APP", self.onDestroy);
         self.registerEvent();
     def __del__(self):
         self.unregisterEvent();
@@ -166,7 +166,7 @@ class MainApp(Tk):
             os.remove(fileName);
     # 关闭窗口
     def onDestroy(self):
-        EventSystem.dispatch(EventID.WM_DELETE_WINDOW, {});
+        EventSystem.dispatch(EventID.EXIT_APP, {});
         self.destroy();
     # 退出窗口
     def onQuit(self, data = None):
@@ -406,9 +406,9 @@ class MainWindow(Frame):
                     shutil.rmtree(self.__tempPath);
                     self.__tempPath = "";
     def registerEvent(self):
-        EventSystem.register(EventID.WM_DELETE_WINDOW, self, "onDestroy");
+        EventSystem.register(EventID.EXIT_APP, self, "onDestroy");
     def unregisterEvent(self):
-        EventSystem.unregister(EventID.WM_DELETE_WINDOW, self, "onDestroy");
+        EventSystem.unregister(EventID.EXIT_APP, self, "onDestroy");
     def stopThread(self):
         if self.__thread:
             stopThread(self.__thread);

@@ -22,6 +22,12 @@ class EVENT_ID(Enum):
 	def getNewId():
 		return getNewEventId();
 
-	WM_DELETE_WINDOW = getNewEventId(); # 关闭窗口事件
+	EXIT_APP = getNewEventId(); # 关闭窗口事件
 	
 	DO_QUIT_APP = getNewEventId(); # 主动退出窗口事件
+
+	ADD_SCHEDULE_TASK = getNewEventId(); # 添加任务
+
+	START_SCHEDULE_TASK = getNewEventId(); # 开始任务
+
+	CLEAR_SCHEDULE_TASK = getNewEventId(); # 清除任务
