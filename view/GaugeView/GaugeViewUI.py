@@ -22,6 +22,7 @@ class GaugeViewUI(wx.Panel):
 			"size" : (-1,-1),
 			"style" : wx.BORDER_NONE,
 			"fgColour" : wx.Colour(0,0,0),
+			"label" : "正在加载...",
 		};
 		for k,v in params.items():
 			self.__params[k] = v;
@@ -60,7 +61,7 @@ class GaugeViewUI(wx.Panel):
 		self.gauge = wx.Gauge(self, size = (self.GetSize()[0], 20), style = wx.GA_SMOOTH);
 
 	def createInfoText(self):
-		self.text = wx.StaticText(self, label = "正在启动...", style = wx.ALIGN_LEFT);
+		self.text = wx.StaticText(self, label = self.__params["label"], style = wx.ALIGN_LEFT);
 
 	def resetView(self, data = {}):
 		self.updateView({

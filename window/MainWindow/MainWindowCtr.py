@@ -9,6 +9,8 @@ import threading;
 import copy;
 
 from event.Instance import *; # local
+from config.AppConfig import *; # local
+from utils.baseUtil import *; # local
 
 from window.MainWindow.MainWindowUI import *; # local
 
@@ -23,7 +25,6 @@ class MainWindowCtr(object):
 		self.__CtrMap = {}; # 所创建的控制器
 		self.initUI(parent);
 		self.registerEventMap(); # 注册事件
-		self.bindBehaviors(); # 绑定组件
 		self.__scheduleTaskList = []; # 调度任务列表
 
 	def __del__(self):
@@ -36,7 +37,6 @@ class MainWindowCtr(object):
 
 	def __unload__(self):
 		self.unregisterEventMap(); # 注销事件
-		self.unbindBehaviors(); # 解绑组件
 		self.delCtrMap(); # 銷毀控制器列表
 
 	def getRegisterEventMap(self):
@@ -112,7 +112,7 @@ class MainWindowCtr(object):
 			# 添加到任务列表
 			self.__scheduleTaskList.append({
 				"task" : data["scheduleTask"],
-				"text" : data.get("text", "正在启动"),
+				"text" : data.get("text", "正在更新"),
 				"args" : data.get("args", {}),
 				"failInfo" : data.get("failInfo", {}),
 			});
@@ -142,7 +142,7 @@ class MainWindowCtr(object):
 			threading.Thread(target = self.handleScheduleTask, args = (taskInfo, scheduleTaskList, )).start();
 		else:
 			self.getCtrByKey("GaugeView").updateView({
-				"text" : "完成启动，正在打开主界面...",
+				"text" : "完成更新，开始运行平台程序。",
 				"gauge" : 1,
 			});
 			if hasattr(self, "scheduleCallbackInfo"):
@@ -156,7 +156,7 @@ class MainWindowCtr(object):
 			# 调用校验失败后的相关回调函数
 			failInfo = taskInfo.get("failInfo", {});
 			wx.CallAfter(self.getCtrByKey("GaugeView").updateView, {
-				"text" : failInfo.get("text", "启动失败！"),
+				"text" : failInfo.get("text", "更新失败！"),
 				"textColor" : failInfo.get("textColor", wx.Colour(255, 0, 0)),
 			});
 			failCallback = None;
@@ -189,7 +189,9 @@ class MainWindowCtr(object):
 		isContinue, taskResult = True, None;
 		if callable(taskInfo.get("task")):
 			args = taskInfo.get("args", {});
-			result = taskInfo.get("task")(*args.get("list", []), **args.get("dict", {}), addGaugeVal = self.addSingleGaugeValue);
+			def callback(rate):
+				wx.CallAfter(self.addSingleGaugeValue, rate);
+			result = taskInfo.get("task")(*args.get("list", []), **args.get("dict", {}), callback = callback);
 			if isinstance(result, tuple) and len(result) > 0:
 				isContinue = result[0];
 				if len(result) > 1:

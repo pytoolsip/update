@@ -5,8 +5,12 @@
 # @Last Modified time: 2019-03-16 13:46:29
 
 import wx;
+import os;
+import base64;
+import time;
 
 from event.Instance import *; # local
+from config.AppConfig import *; # local
 
 class MainWindowUI(wx.Frame):
 	"""docstring for MainWindowUI"""
@@ -29,10 +33,16 @@ class MainWindowUI(wx.Frame):
 		pass;
 
 	def initIcon(self):
-		self.SetIcon(wx.Icon(os.path.join(self._curPath, "..", "..", "icon", "dzjh.ico"), wx.BITMAP_TYPE_ICO));
+		if "AppIcon" in PngConfig:
+			img = base64.b64decode(PngConfig["AppIcon"].encode());
+			fileName = f"temp_dzjh_{time.time()}.ico";
+			with open(fileName, 'wb') as f:
+				f.write(img);
+			self.SetIcon(wx.Icon(fileName, wx.BITMAP_TYPE_ICO));
+			os.remove(fileName);
 
 	def createViewCtrs(self):
-		self.getCtr().createCtrByKey("GaugeView", self._projectPath + "view/GaugeView", params = {"size" : (self.GetSize()[0], -1)}); # , parent = self, params = {}
+		self.getCtr().createCtrByKey("GaugeView", params = {"size" : (self.GetSize()[0], -1), "label" : "开始更新平台..."}); # , parent = self, params = {}
 		self.createTitle();
 		self.createReverifyButton();
 		self.createDetailTextCtrl();

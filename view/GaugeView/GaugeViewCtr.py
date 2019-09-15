@@ -7,6 +7,7 @@ import os;
 import wx;
 
 from event.Instance import *; # local
+from utils.baseUtil import *; # local
 
 from view.GaugeView.GaugeViewUI import *;
 
@@ -19,7 +20,6 @@ class GaugeViewCtr(object):
 		self.__CtrMap = {}; # 所创建的控制器
 		self.initUI(parent, params); # 初始化视图UI
 		self.registerEventMap(); # 注册事件
-		self.bindBehaviors(); # 绑定组件
 
 	def __del__(self):
 		self.__dest__();
@@ -31,7 +31,6 @@ class GaugeViewCtr(object):
 
 	def __unload__(self):
 		self.unregisterEventMap(); # 注销事件
-		self.unbindBehaviors(); # 解绑组件
 		self.delCtrMap(); # 銷毀控制器列表
 
 	def getRegisterEventMap(self):
@@ -83,12 +82,6 @@ class GaugeViewCtr(object):
 		for eventId, callbackName in eventMap.items():
 			EventSystem.unregister(eventId, self, callbackName);
 
-	def bindBehaviors(self):
-		pass;
-		
-	def unbindBehaviors(self):
-		pass;
-			
 	def updateView(self, data):
 		self.__ui.updateView(data);
 		

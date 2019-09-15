@@ -11,6 +11,13 @@ from utils.updateUtil import *; # local
 
 from window.MainWindow.MainWindowCtr import *; # local
 
+urlListName = "url_list.json"
+def getUrlListPath(basePath):
+    return os.path.join(basePath, "data", urlListName);
+
+def getDependMapPath(basePath):
+    return os.path.join(basePath, "data", "depend_map.json");
+
 class MainApp(wx.App):
     def __init__(self, version, projectPath, updatePath):
         super(MainApp, self).__init__();
@@ -52,14 +59,15 @@ class MainApp(wx.App):
         self.ExitMainLoop();
 
     # 创建主窗口
-    def create(self):
-        self.__mainWinCtr = MainWindowCtr(self);
+    def createWindows(self):
+        self.__mainWinCtr = MainWindowCtr();
 
     # 执行程序
     def run(self):
         self.__isRunning = True;
         self.verifyPath();
         self.downloadIP();
+        self.MainLoop();
 
     def onFinish(self):
         self.__isRunning = False;
@@ -78,7 +86,7 @@ class MainApp(wx.App):
 
     # 下载平台
     def downloadIP(self):
-        ret, resp = requestJson({"key":"ptip", "req":"urlList", "version":version});
+        ret, resp = requestJson({"key":"ptip", "req":"urlList", "version":self.__version});
         if ret:
             urlList = self.checkUrlList(resp.get("urlList", []));
             if len(urlList) > 0:
@@ -133,6 +141,15 @@ class MainApp(wx.App):
                         # "failCallback" : self.showInstallModMsgDialog,
                     },
                 });
+        # 添加处理更新目录任务
+        EventSystem.dispatch(EventID.ADD_SCHEDULE_TASK, {
+            "scheduleTask" : self.__dealUpdatePath__,
+            "text" : f"正在处理更新目录{self.__updatePath}",
+            "failInfo" : {
+                "text" : f"处理更新目录{self.__updatePath}失败！",
+                # "failCallback" : self.showInstallModMsgDialog,
+            },
+        });
 
     # 保存url列表数据
     def saveUrlListResp(self, urlList):
@@ -141,15 +158,6 @@ class MainApp(wx.App):
             os.makedirs(dataPath);
         with open(os.path.join(dataPath, urlListName), "w") as f:
             f.write(json.dumps(urlList));
-
-    def verifyPath(self):
-        self.__tipsVal.set(f"开始校验平台资源文件...");
-        verifyAssets(self.__tempPath, self.__basePath, getDependMapPath(self.__projectPath))
-        self.__tipsVal.set(f"完成平台资源文件校验。\n开始更新平台目录..");
-        if os.path.exists(self.__updatePath):
-            shutil.rmtree(self.__updatePath);
-        shutil.move(self.__tempPath, self.__updatePath);
-        self.__tipsVal.set(f"完成平台目录更新。");
 
     def getUrlKeyMap(self, urlList):
         keyMap = {};
@@ -177,16 +185,25 @@ class MainApp(wx.App):
                 retList.append(v);
         return retList;
 
+    # 校验及处理更新目录
+    def __dealUpdatePath__(self, callback = None):
+        verifyAssets(self.__tempPath, self.__basePath, getDependMapPath(self.__projectPath));
+        callback(0.5);
+        if os.path.exists(self.__updatePath):
+            shutil.rmtree(self.__updatePath);
+        callback(0.75);
+        shutil.move(self.__tempPath, self.__updatePath);
+
     # 下载文件
-    def __download__(self, url, filepath, addGaugeVal = None):
+    def __download__(self, url, filepath, callback = None):
         self.__tips.set(f"正在下载：\n{url}");
         self.__checkFilePath__(filepath);
         def schedule(block, size, totalSize):
-            addGaugeVal(block*size / totalSize);
+            callback(block*size / totalSize);
         request.urlretrieve(url, filepath, schedule);
 
     # 解压文件
-    def __unzip__(self, filepath, dirpath, isRmZip = True, addGaugeVal = None):
+    def __unzip__(self, filepath, dirpath, isRmZip = True, callback = None):
         if not os.path.exists(filepath):
             return;
         with zipfile.ZipFile(filepath, "r") as zf:
@@ -195,7 +212,7 @@ class MainApp(wx.App):
             for file in zf.namelist():
                 zf.extract(file, dirpath);
                 completeCnt += 1;
-                addGaugeVal(completeCnt/totalCnt);
+                callback(completeCnt/totalCnt);
             zf.close();
             # 移除zip文件
             if isRmZip:
