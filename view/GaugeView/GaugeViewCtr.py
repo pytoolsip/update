@@ -9,7 +9,7 @@ import wx;
 from event.Instance import *; # local
 from utils.baseUtil import *; # local
 
-from view.GaugeView.GaugeViewUI import *;
+from view.GaugeView.GaugeViewUI import *; # local
 
 class GaugeViewCtr(object):
 	"""docstring for GaugeViewCtr"""
