@@ -130,9 +130,9 @@ AppConfig = {
 	"Copyright" : u"Copyright(C) 2018-2019 JimDreamHeart. All Rights Reserved",
 	"WinTitle" : u"更新 PyToolsIP【Python工具集成平台】",
 	"ContentColor" : "#CDCDCD",
-	"homeUrl" : "http://jimdreamheart.club",
+	"homeUrl" : "https://ptip.jdreamheart.com",
 	# "homeUrl" : "http://localhost:8000",
-	"reqInfoUrl" : "http://jimdreamheart.club/pytoolsip/reqinfo",
+	"reqInfoUrl" : "https://ptip.jdreamheart.com/reqinfo",
 	# "reqInfoUrl" : "http://localhost:8000/reqinfo",
 };
 PngConfig = {
