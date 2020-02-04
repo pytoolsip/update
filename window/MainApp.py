@@ -110,10 +110,11 @@ class MainApp(wx.App):
     def downloadIP(self):
         ret, resp = requestJson({"key":"ptip", "req":"urlList", "version":self.__version});
         if ret:
-            urlList = self.checkUrlList(resp.get("urlList", []));
+            oriUrlList = resp.get("urlList", []);
+            urlList = self.checkUrlList(oriUrlList);
             if len(urlList) > 0:
                 self.saveUrlListResp(resp); # 保存请求数据
-                self.createTasks(self.__tempPath, urlList); # 创建任务
+                self.createTasks(self.__tempPath, urlList, oriUrlList); # 创建任务
                 EventSystem.dispatch(EventID.START_SCHEDULE_TASK, {
                     "callbackInfo" : {"callback" : self.onFinish},
                 });
@@ -123,7 +124,7 @@ class MainApp(wx.App):
             wx.MessageDialog(self.__mainWinCtr.getUI(), "下载平台失败！", "网络异常", style = wx.OK|wx.ICON_ERROR).ShowModal();
 
     # 创建任务
-    def createTasks(self, basePath, urlList):
+    def createTasks(self, basePath, urlList, oriUrlList):
         EventSystem.dispatch(EventID.CLEAR_SCHEDULE_TASK, {});
         for urlInfo in urlList:
             name, url = urlInfo.get("name", ""), urlInfo["url"];
@@ -161,6 +162,18 @@ class MainApp(wx.App):
                         # "failCallback" : self.showInstallModMsgDialog,
                     },
                 });
+        # 添加校验更新目录任务
+        EventSystem.dispatch(EventID.ADD_SCHEDULE_TASK, {
+            "scheduleTask" : self.__verifyUrlList__,
+            "text" : f"正在校验更新目录{self.__updatePath}",
+            "args" : {
+                "list" : [oriUrlList],
+            },
+            "failInfo" : {
+                "text" : f"校验更新目录{self.__updatePath}失败！",
+                # "failCallback" : self.showInstallModMsgDialog,
+            },
+        });
         # 添加处理更新目录任务
         EventSystem.dispatch(EventID.ADD_SCHEDULE_TASK, {
             "scheduleTask" : self.__dealUpdatePath__,
@@ -248,3 +261,25 @@ class MainApp(wx.App):
                 os.remove(filepath);
             return True;
         return False;
+
+    def __verifyUrlList__(self, urlList, callback = None):
+        count = 0;
+        for urlInfo in urlList:
+            name = urlInfo.get("name", "");
+            fileName = os.path.basename(urlInfo["url"]);
+            _, ext = os.path.splitext(fileName);
+            if name:
+                filepath = os.path.join(checkPath(urlInfo["path"]), name);
+                if ext != ".zip":
+                    filepath += ext;
+            else:
+                filepath = os.path.join(checkPath(urlInfo["path"]), fileName);
+            tempPath = os.path.abspath(os.path.join(self.__tempPath, filepath));
+            updatePath = os.path.abspath(os.path.join(self.__updatePath, filepath));
+            if not os.path.exists(tempPath) and os.path.exists(updatePath):
+                shutil.move(updatePath, tempPath);
+                pass;
+            # 自增计数
+            count += 1;
+            callback(count/len(urlList));
+        return True;
