@@ -2,9 +2,18 @@
 # @Author: JinZhang
 # @Date:   2019-05-31 11:23:44
 # @Last Modified by:   JinZhang
-# @Last Modified time: 2019-05-31 17:25:29
+# @Last Modified time: 2020-05-21 16:45:31
 import os, sys;
 import shutil, json;
+
+# 分割等号
+def _splitEqualSign_(modstr):
+	modstr = modstr.strip();
+	if modstr.find("=") != -1:
+		if modstr.find("==") != -1:
+			return tuple(modstr.split("=="));
+		return tuple(modstr.split("="));
+	return (modstr, "");
 
 # 获取json数据
 def _getJsonData_(filePath):
@@ -44,7 +53,7 @@ def _getDependMods_(assetsPath):
 		return modList;
 	with open(modFile, "r") as f:
 		for line in f.readlines():
-			mod = line.strip();
+			mod = splitEqualSign(line.strip());
 			if mod not in modList:
 				modList.append(mod);
 	return modList;
@@ -53,15 +62,20 @@ def _getDependMods_(assetsPath):
 def _diffDependMods_(tempPath, targetPath):
 	modList = [];
 	tempModList, tgtModList = _getDependMods_(tempPath), _getDependMods_(targetPath);
-	for mod in tempModList:
-		if mod not in tgtModList:
-			modList.append(mod);
+	tgtModMap = {};
+	for mod, ver in tgtModList:
+		tgtModMap[mod] = ver;
+	for mod, ver in tempModList:
+		if mod not in tgtModMap:
+			modList.append((mod, ver));
+		elif ver and ver != tgtModMap[mod]:
+			modList.append((mod, ver));
 	return modList;
 
 # 检测依赖模块列表
 def _checkDependMapJson_(tempPath, targetPath, dependMapFile):
 	isChange, dependMap = False, _getJsonData_(dependMapFile);
-	for mod in _diffDependMods_(tempPath, targetPath):
+	for mod, ver in _diffDependMods_(tempPath, targetPath):
 		if mod not in dependMap:
 			dependMap[mod] = 1;
 			isChange = True;
