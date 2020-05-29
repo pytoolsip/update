@@ -77,8 +77,20 @@ def _checkDependMapJson_(tempPath, targetPath, dependMapFile):
 	isChange, dependMap = False, _getJsonData_(dependMapFile);
 	for mod, ver in _diffDependMods_(tempPath, targetPath):
 		if mod not in dependMap:
-			dependMap[mod] = 1;
-			isChange = True;
+			dependMap[mod] = {
+				"ver" : v,
+				"map" : {
+					"pytoolsip" : v,
+				},
+			};
+		else:
+			depend = dependMap[m];
+			depend["ver"] = v;
+			depend["map"]["pytoolsip"] = v;
+			for ver in depend["map"].values():
+				if ver:
+					depend["ver"] = ver;
+		isChange = True;
 	if isChange:
 		with open(dependMapFile, "w") as f:
 			f.write(json.dumps(dependMap));
@@ -87,6 +99,6 @@ def _checkDependMapJson_(tempPath, targetPath, dependMapFile):
 # 校验平台assets
 def verifyAssets(tempPath, targetPath, dependMapFile):
 	if _copyFileByMd5s_(tempPath, targetPath):
-		_checkDependMapJson_(tempPath, targetPath, dependMapFile); # 检测依赖模块配置
+		# _checkDependMapJson_(tempPath, targetPath, dependMapFile); # 检测依赖模块配置
 		return True;
 	return False;

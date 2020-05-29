@@ -151,6 +151,13 @@ def requestJson(data):
     except Exception as e:
         print(e);
     return False, None;
+def _splitEqualSign_(modstr):
+	modstr = modstr.strip();
+	if modstr.find("=") != -1:
+		if modstr.find("==") != -1:
+			return tuple(modstr.split("=="));
+		return tuple(modstr.split("="));
+	return (modstr, "");
 def _getJsonData_(filePath):
 	if os.path.exists(filePath):
 		with open(filePath, "r") as f:
@@ -182,30 +189,47 @@ def _getDependMods_(assetsPath):
 		return modList;
 	with open(modFile, "r") as f:
 		for line in f.readlines():
-			mod = line.strip();
+			mod = splitEqualSign(line.strip());
 			if mod not in modList:
 				modList.append(mod);
 	return modList;
 def _diffDependMods_(tempPath, targetPath):
 	modList = [];
 	tempModList, tgtModList = _getDependMods_(tempPath), _getDependMods_(targetPath);
-	for mod in tempModList:
-		if mod not in tgtModList:
-			modList.append(mod);
+	tgtModMap = {};
+	for mod, ver in tgtModList:
+		tgtModMap[mod] = ver;
+	for mod, ver in tempModList:
+		if mod not in tgtModMap:
+			modList.append((mod, ver));
+		elif ver and ver != tgtModMap[mod]:
+			modList.append((mod, ver));
 	return modList;
 def _checkDependMapJson_(tempPath, targetPath, dependMapFile):
 	isChange, dependMap = False, _getJsonData_(dependMapFile);
-	for mod in _diffDependMods_(tempPath, targetPath):
+	for mod, ver in _diffDependMods_(tempPath, targetPath):
 		if mod not in dependMap:
-			dependMap[mod] = 1;
-			isChange = True;
+			dependMap[mod] = {
+				"ver" : v,
+				"map" : {
+					"pytoolsip" : v,
+				},
+			};
+		else:
+			depend = dependMap[m];
+			depend["ver"] = v;
+			depend["map"]["pytoolsip"] = v;
+			for ver in depend["map"].values():
+				if ver:
+					depend["ver"] = ver;
+		isChange = True;
 	if isChange:
 		with open(dependMapFile, "w") as f:
 			f.write(json.dumps(dependMap));
 	return dependMap;
 def verifyAssets(tempPath, targetPath, dependMapFile):
 	if _copyFileByMd5s_(tempPath, targetPath):
-		_checkDependMapJson_(tempPath, targetPath, dependMapFile); # 检测依赖模块配置
+		# _checkDependMapJson_(tempPath, targetPath, dependMapFile); # 检测依赖模块配置
 		return True;
 	return False;
 import threading;
