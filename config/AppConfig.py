@@ -1,7 +1,7 @@
 AppConfig = {
 	"Title" : u"PyToolsIP Update",
 	"Size" : (640, 420),
-	"Copyright" : u"Copyright(C) 2018-2019 JimDreamHeart. All Rights Reserved",
+	"Copyright" : u"Copyright(C) 2018-2020 JimDreamHeart. All Rights Reserved",
 	"WinTitle" : u"更新 PyToolsIP【Python工具集成平台】",
 	"ContentColor" : "#CDCDCD",
 	"homeUrl" : "https://ptip.jdreamheart.com",
